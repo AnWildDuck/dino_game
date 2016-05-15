@@ -10,10 +10,54 @@ var windowX = 720;
 var cactusManager
 var dino
 
+var butonStatus = {
+    spaceBarDown: false,
+    touchDown: false,
+    lastStatus: false,
+}
+
+function setButtonStatus() {
+    var buttonWillBeDown = butonStatus.touchDown || butonStatus.spaceBarDown;
+    
+    if (!butonStatus.lastStatus && buttonWillBeDown) {
+        for (var thing of onDownThings) {
+            thing();
+        }
+    }
+    
+    butonStatus.lastStatus = buttonWillBeDown;
+}
+
+
+function handleTouch(evt) {
+    console.log(evt.touches.length);
+    butonStatus.touchDown = evt.touches.length > 0;
+    setButtonStatus();
+}
+
+var onDownThings = [];
+
 
 function init() {
     var canvas = document.getElementById('tutorial');
     ctx = canvas.getContext('2d');
+    
+    canvas.addEventListener("touchstart", handleTouch, false);
+    canvas.addEventListener("touchend", handleTouch, false);
+    
+    document.addEventListener('keydown', (event)=>{
+        if (event.keyCode == keys.space) {
+            butonStatus.spaceBarDown = true;
+                setButtonStatus();
+        }
+    });
+
+    document.addEventListener('keyup', (event)=>{
+        if (event.keyCode == keys.space) {
+            butonStatus.spaceBarDown = false;
+                setButtonStatus();
+        }
+    });
     
     ctx.imageSmoothingEnabled = false;
     
@@ -23,20 +67,20 @@ function init() {
     loopStep();
 }
 
-function loopStep () {
+function loopStep() {
     window.requestAnimationFrame(loopStep);
     ctx.clearRect(0, 0, windowX, windowY);
     
     cactusManager.makeCactus();
     cactusManager.manage();
     cactusManager.show();
-
+    
     if (cactusManager.touching(dino)) {
         // SHUT. DOWN. EVERYTHING!
         ctx.font = "30px Arial";
         ctx.fillText("touching", 10, 50)
     }
-
+    
     dino.physics();
     dino.show();
 }
@@ -46,7 +90,7 @@ function touching(rect1, rect2) {
     if (rect1.left < rect2.right && rect1.right > rect2.left) {
         if (rect1.top < rect2.bottom && rect1.bottom > rect2.top) {
             return true;
-        } 
+        }
     }
 }
 
@@ -89,7 +133,7 @@ class Cactus {
     onScreen() {
         if (this.x + this.width > 0) {
             return true;
-        } 
+        }
     }
     touchingCacti(dino) {
         return touching(getBox(this), getBox(dino));
@@ -98,11 +142,11 @@ class Cactus {
 
 function getBox(thing) {
     return {
-            left: thing.x,
-            top: thing.y,
-            right: thing.x + thing.width,
-            bottom:thing.y + thing.height
-        };
+        left: thing.x,
+        top: thing.y,
+        right: thing.x + thing.width,
+        bottom: thing.y + thing.height
+    };
 }
 
 function random(min, max) {
@@ -128,8 +172,8 @@ class CactusManger {
         for (var cactus of this.cacti) {
             
             cactus.x -= 5 * gameSpeed;
-
-
+            
+            
             
             if (cactus.onScreen()) {
                 cacti2.push(cactus);
@@ -184,12 +228,11 @@ class Dino {
         this.width = 20 * this.scale;
         //this.greeting = "Howdy"
         
-        document.addEventListener('keydown', (event)=>{
-            if (event.keyCode == keys.space && this.onGround()) {
+        onDownThings.push(() => {
+            if(this.onGround()) {
                 this.velocityY = -15;
             }
-        }
-        );
+        });
     }
     
     show() {
@@ -214,7 +257,7 @@ class Dino {
             if (this.velocityY < 20) {
                 this.velocityY += 2;
             }
-            if (key.isPressed('space')) {
+            if (butonStatus.lastStatus) {
                 this.velocityY -= 1.5
             }
         } else if (this.velocityY >= 0) {
